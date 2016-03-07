@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# 
+# Resize all .jpg images in a given directory to its responsive dimensions, provided
+# by a CONFIG file which specifies dimensions in an imagemagick-friendly way.
+# 
+# Make sure absolute paths are being provided.
+#
+# CONFIG file syntax: 
+#   L 950x
+#   M 730x
+#   S 350x
+#
+# foo.jpg becomes 
+#   foo_l.jpg (950x width)
+#   foo_m.jpg (730x width)
+#   foo_s.jpg (350x width)
+#
+# This type of dimension declaration maintains the aspect ratio of the image while
+# resizing to a specific width. The script will just pass in whatever value is designated
+# in the config straight to imagemagick.
+#
+# Parameters: 
+#   Path to input directory (with original .jpg files)
+#   Path to output directory (to contain _s.jpg, _m.jpg, _l.jpg for each file)
+
+inputDir="$1"
+outputDir="$2"
+config="$inputDir"CONFIG
+
+
+if [ ! -d $inputDir ]; then
+    echo "inputDir $inputDir does not exist. Exiting."
+    exit 1
+fi
+
+if [ ! -f $config ]; then
+    echo "config $config does not exist. Exiting."
+    exit 1
+fi
+
+if [ ! -d $outputDir ]; then
+    echo "outputDir $outputDir does not exist."
+    mkdir -p $outputDir
+    echo "$outputDir created."
+else
+    echo "outputDir $outputDir exists."
+    rm "$outputDir"*.jpg
+    echo "Deleted all jpgs in $outputDir."
+fi
+
+
+# Parse out the CONFIG parameters for this folder
+L=$(grep "L" $config | awk {'print $2'})
+M=$(grep "M" $config | awk {'print $2'})
+S=$(grep "S" $config | awk {'print $2'})
+
+
+for i in $inputDir/*.jpg; do
+    filepath=${i##*/}
+    filename=${filepath%.*}
+    convert $i -resize $L $outputDir"$filename"_l.jpg;
+    convert $i -resize $M $outputDir"$filename"_m.jpg;
+    convert $i -resize $S $outputDir"$filename"_s.jpg;
+    echo "Converted '$i'"
+done

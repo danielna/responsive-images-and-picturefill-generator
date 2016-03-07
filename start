@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+# 
+# Given an input folder of responsive images that are consistent with an assumed
+# structure:
+#
+#   input-folder
+#       folder-1/
+#           src/
+#               CONFIG
+#               1.jpg
+#               2.jpg
+#       folder-2/
+#           src/
+#               CONFIG
+#               3.jpg
+#               4.jpg
+#       folder-3/
+#           src/
+#               CONFIG
+#               5.jpg
+#               6.jpg
+#
+# To this output:
+#
+#   output-folder
+#       folder-1/
+#           pictureElements.txt
+#           1_s.jpg
+#           1_m.jpg
+#           1_l.jpg
+#           2_s.jpg
+#           2_m.jpg
+#           2_l.jpg
+#       folder-2/
+#           pictureElements.txt
+#           3_s.jpg
+#           3_m.jpg
+#           3_l.jpg
+#           4_s.jpg
+#           4_m.jpg
+#           4_l.jpg
+#       folder-3/
+#           pictureElements.txt
+#           5_s.jpg
+#           5_m.jpg
+#           5_l.jpg
+#           6_s.jpg
+#           6_m.jpg
+#           6_l.jpg
+#
+# Parameters: 
+#   Path to input base directory
+#   Path to output base directory
+
+
+_baseDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+_libDir="$_baseDir/lib"
+
+inputDir="$1"
+outputDir="$2"
+
+
+# Guard against empty parameters 
+if [[ "${#inputDir}" -eq 0 || "${#outputDir}" -eq 0 ]]
+then
+    echo "Please specify an inputDir and outputDir as parameters."
+    exit 1;
+fi
+
+
+if [ ! -d $inputDir ]; then
+    echo "inputDir $inputDir does not exist. Exiting."
+    exit 1
+fi
+
+
+if [ ! -d $outputDir ]; then
+    echo "outputDir $outputDir does not exist."
+    mkdir -p $outputDir
+    echo "$outputDir created."
+else
+    echo "outputDir $outputDir exists."
+    rm -r "$outputDir"*
+    echo "Deleted all files in $outputDir."
+fi
+
+
+# find the directory names in the inputDir via this crazy one-liner
+for srcPath in $(find $inputDir -type d | grep src); do
+    dirName=$(echo $srcPath | sed "s|^$inputDir||" | sed 's/\// /g' | awk '{print $1}')
+    outputPath=$outputDir/$dirName
+
+    mkdir -p $outputPath
+
+    echo ">> Resizing images for $dirName..."
+    /bin/bash $_libDir/resize $srcPath/ $outputPath/
+    echo ">> Resizing complete."
+
+    echo ">> Creating Picturefill HTML..."
+    node $_libDir/peg_wrapper $srcPath $dirName $outputPath
+    echo ">> Picturefill HTML complete."
+
+done
